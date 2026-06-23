@@ -1,0 +1,339 @@
+# =============================================================================
+# diff_checker — Configurazione di esempio (Oracle + variabili d'ambiente)
+# =============================================================================
+#
+# Utilizzo:
+#   python main.py config_example.yml -o report.html
+#   python main.py config_example.yml -f json -o report.json
+#
+# Prima dell'esecuzione esportare le variabili con prefisso CHECK_TOOL_:
+#
+#   Windows PowerShell:
+#     $env:CHECK_TOOL_SRC_USER     = "hr"
+#     $env:CHECK_TOOL_SRC_PASSWORD = "hr_password"
+#     $env:CHECK_TOOL_SRC_HOST     = "ora-source.example.com"
+#     $env:CHECK_TOOL_SRC_PORT     = "1521"
+#     $env:CHECK_TOOL_SRC_SERVICE  = "ORCL"
+#     $env:CHECK_TOOL_SRC_SCHEMA   = "HR"
+#     $env:CHECK_TOOL_TGT_USER     = "hr"
+#     $env:CHECK_TOOL_TGT_PASSWORD = "hr_password"
+#     $env:CHECK_TOOL_TGT_HOST     = "ora-target.example.com"
+#     $env:CHECK_TOOL_TGT_PORT     = "1521"
+#     $env:CHECK_TOOL_TGT_SERVICE  = "ORCL"
+#     $env:CHECK_TOOL_TGT_SCHEMA   = "HR"
+#
+#   Linux / macOS:
+#     export CHECK_TOOL_SRC_USER=hr  ...
+#
+# Tutti i valori stringa del YAML supportano la sintassi ${VAR_NAME}.
+# =============================================================================
+
+# ── Output (valori predefiniti, sovrascrivibili dai flag CLI) ─────────────────
+output:
+  format: "html"            # html | text | json
+  file:   "report.html"     # omettere per stampare su stdout
+
+
+# =============================================================================
+# COPPIE TABELLE DATABASE (Oracle)
+# =============================================================================
+# Connessione tramite componenti individuali (raccomandato con env vars):
+#   user / password / host / port (default 1521) / service
+#
+# In alternativa, una connection_string SQLAlchemy completa:
+#   connection_string: "oracle+oracledb://user:pwd@host:1521/?service_name=SVC"
+#
+# Logica di confronto dati:
+#   • stesso host/service (connection_string identica) → SQL MINUS sul DB
+#   • host/service diversi                            → Python set-difference
+# =============================================================================
+database_pairs:
+
+  # ── Coppia sullo stesso Oracle instance → SQL MINUS eseguito sul DB ────────
+  - id: "HR_EMPLOYEES"
+    source:
+      user:     "${CHECK_TOOL_SRC_USER}"
+      password: "${CHECK_TOOL_SRC_PASSWORD}"
+      host:     "${CHECK_TOOL_SRC_HOST}"
+      port:     "${CHECK_TOOL_SRC_PORT}"
+      service:  "${CHECK_TOOL_SRC_SERVICE}"
+      schema:   "${CHECK_TOOL_SRC_SCHEMA}"
+      table:    "EMPLOYEES"
+    target:
+      user:     "${CHECK_TOOL_TGT_USER}"
+      password: "${CHECK_TOOL_TGT_PASSWORD}"
+      host:     "${CHECK_TOOL_TGT_HOST}"
+      port:     "${CHECK_TOOL_TGT_PORT}"
+      service:  "${CHECK_TOOL_TGT_SERVICE}"
+      schema:   "${CHECK_TOOL_TGT_SCHEMA}"
+      table:    "EMPLOYEES"
+    exclude_columns:
+      - "LAST_UPDATE_DATE"
+      - "LAST_UPDATED_BY"
+    max_diffs: 200
+
+  # ── Seconda coppia ─────────────────────────────────────────────────────────
+  - id: "HR_DEPARTMENTS"
+    source:
+      user:     "${CHECK_TOOL_SRC_USER}"
+      password: "${CHECK_TOOL_SRC_PASSWORD}"
+      host:     "${CHECK_TOOL_SRC_HOST}"
+      port:     "${CHECK_TOOL_SRC_PORT}"
+      service:  "${CHECK_TOOL_SRC_SERVICE}"
+      schema:   "${CHECK_TOOL_SRC_SCHEMA}"
+      table:    "DEPARTMENTS"
+    target:
+      user:     "${CHECK_TOOL_TGT_USER}"
+      password: "${CHECK_TOOL_TGT_PASSWORD}"
+      host:     "${CHECK_TOOL_TGT_HOST}"
+      port:     "${CHECK_TOOL_TGT_PORT}"
+      service:  "${CHECK_TOOL_TGT_SERVICE}"
+      schema:   "${CHECK_TOOL_TGT_SCHEMA}"
+      table:    "DEPARTMENTS"
+    exclude_columns:
+      - "CREATION_DATE"
+    # row_limit: 500000   # max righe caricate per lato (solo Python set-difference)
+    max_diffs: 100
+
+
+# =============================================================================
+# COPPIE FILE (CSV, TXT, XML)
+# =============================================================================
+# type: csv | txt | xml
+#
+# Due modalità per specificare i file:
+#   a) Path diretto:      source.path / target.path
+#   b) Directory+regex:   source.directory + source.pattern
+#      I file sono abbinati per nome (match_by: name, default)
+#      oppure per ordine alfabetico (match_by: index).
+#
+# Confronto: set-difference equivalente al MINUS Oracle
+#   CSV → differenza su righe (tuple di valori)
+#   TXT → differenza su righe di testo
+#   XML → differenza su coppie (xpath, valore) ottenute appiattendo l'albero
+# =============================================================================
+file_pairs:
+
+  # ── CSV — path diretto ─────────────────────────────────────────────────────
+  - id: "CLIENTI_CSV"
+    type: "csv"
+    source:
+      path: "C:/dati/source/clienti.csv"
+    target:
+      path: "C:/dati/target/clienti.csv"
+    delimiter: ";"
+    encoding: "utf-8"
+    has_header: true
+    exclude_columns:
+      - "DATA_AGGIORNAMENTO"
+      - "UTENTE_MODIFICA"
+    max_diffs: 100
+
+  # ── CSV — directory con pattern regex ─────────────────────────────────────
+  - id: "ORDINI_CSV_MENSILI"
+    type: "csv"
+    source:
+      directory: "C:/dati/source/ordini"
+      pattern:   "ordini_\\d{6}\\.csv"    # es. ordini_202401.csv
+    target:
+      directory: "C:/dati/target/ordini"
+      pattern:   "ordini_\\d{6}\\.csv"
+    delimiter: ","
+    encoding: "utf-8"
+    exclude_columns:
+      - "TS_INSERIMENTO"
+    # match_by: "name"    # "name" (default) | "index"
+
+  # ── TXT — path diretto ────────────────────────────────────────────────────
+  - id: "LOG_ERRORI"
+    type: "txt"
+    source:
+      path: "C:/log/source/errori.log"
+    target:
+      path: "C:/log/target/errori.log"
+    encoding: "utf-8"
+    max_diffs: 50
+
+  # ── TXT — directory con pattern regex ────────────────────────────────────
+  - id: "LOG_APP_GIORNALIERI"
+    type: "txt"
+    source:
+      directory: "C:/log/source"
+      pattern:   "app_\\d{8}\\.log"       # es. app_20240101.log
+    target:
+      directory: "C:/log/target"
+      pattern:   "app_\\d{8}\\.log"
+    encoding: "utf-8"
+
+  # ── XML — path diretto ────────────────────────────────────────────────────
+  - id: "CONFIG_XML"
+    type: "xml"
+    source:
+      path: "C:/config/source/settings.xml"
+    target:
+      path: "C:/config/target/settings.xml"
+    exclude_tags:
+      - "timestamp"
+      - "generatedBy"
+    exclude_attributes:
+      - "id"
+      - "createdAt"
+    max_diffs: 100
+
+  # ── XML — directory con pattern regex ────────────────────────────────────
+  - id: "EXPORT_XML"
+    type: "xml"
+    source:
+      directory: "C:/export/source"
+      pattern:   "export_.*\\.xml"
+    target:
+      directory: "C:/export/target"
+      pattern:   "export_.*\\.xml"
+    exclude_tags:
+      - "metadata"
+    exclude_attributes:
+      - "timestamp"
+
+# ── Global output defaults (can be overridden by CLI flags) ──────────────────
+output:
+  format: "text"          # text | json | html
+  # file: "diff_report.txt"   # omit to print to stdout
+
+
+# =============================================================================
+# DATABASE TABLE PAIRS
+# =============================================================================
+# Requires SQLAlchemy and the appropriate DB driver (see requirements.txt).
+# connection_string follows SQLAlchemy URL format:
+#   PostgreSQL : postgresql+psycopg2://user:pass@host:5432/dbname
+#   MySQL      : mysql+pymysql://user:pass@host:3306/dbname
+#   SQL Server : mssql+pyodbc://user:pass@server/dbname?driver=ODBC+Driver+17+for+SQL+Server
+#   SQLite     : sqlite:///path/to/file.db
+# =============================================================================
+database_pairs:
+
+  - id: "users"
+    source:
+      connection_string: "postgresql+psycopg2://user:pass@localhost:5432/source_db"
+      schema: "public"
+      table: "users"
+    target:
+      connection_string: "postgresql+psycopg2://user:pass@localhost:5432/target_db"
+      schema: "public"
+      table: "users"
+    exclude_columns:
+      - "created_at"
+      - "updated_at"
+      - "last_login"
+    order_by: "id"          # column used to sort rows before comparing (optional)
+    max_diffs: 50           # stop reporting after this many row differences
+    # row_limit: 100000     # read at most this many rows (useful for large tables)
+
+  - id: "orders_cross_db"
+    source:
+      connection_string: "mssql+pyodbc://user:pass@server/source?driver=ODBC+Driver+17+for+SQL+Server"
+      schema: "dbo"
+      table: "orders"
+    target:
+      connection_string: "mssql+pyodbc://user:pass@server/target?driver=ODBC+Driver+17+for+SQL+Server"
+      schema: "dbo"
+      table: "orders"
+    exclude_columns:
+      - "modified_date"
+    order_by: "order_id"
+
+
+# =============================================================================
+# FILE PAIRS  (type: csv | txt | xml)
+# =============================================================================
+# Each pair can use either:
+#   a) Direct paths — specify source.path and target.path
+#   b) Directory + regex pattern — specify source.directory + source.pattern
+#      Files are matched by filename (match_by: name, default) or
+#      by sort order (match_by: index).
+# =============================================================================
+file_pairs:
+
+  # ── CSV — direct path ──────────────────────────────────────────────────────
+  - id: "customers_csv"
+    type: "csv"
+    source:
+      path: "C:/data/source/customers.csv"
+    target:
+      path: "C:/data/target/customers.csv"
+    delimiter: ","
+    encoding: "utf-8"
+    has_header: true
+    exclude_columns:
+      - "last_updated"
+      - "sync_id"
+    max_diffs: 100
+
+  # ── CSV — directory pattern (matches e.g. report_20240101.csv) ─────────────
+  - id: "daily_reports_csv"
+    type: "csv"
+    source:
+      directory: "C:/data/source/reports"
+      pattern: "report_\\d{8}\\.csv"
+    target:
+      directory: "C:/data/target/reports"
+      pattern: "report_\\d{8}\\.csv"
+    delimiter: ";"
+    encoding: "utf-8"
+    exclude_columns:
+      - "generated_at"
+    # match_by: "name"    # "name" (default) | "index"
+
+  # ── TXT — direct path ──────────────────────────────────────────────────────
+  - id: "readme_txt"
+    type: "txt"
+    source:
+      path: "C:/data/source/README.txt"
+    target:
+      path: "C:/data/target/README.txt"
+    encoding: "utf-8"
+    context_lines: 3        # lines of context around each diff hunk
+    max_diffs: 50
+
+  # ── TXT — directory pattern (matches e.g. app_2024-01-01.log) ─────────────
+  - id: "app_logs_txt"
+    type: "txt"
+    source:
+      directory: "C:/data/source/logs"
+      pattern: "app_.*\\.log"
+    target:
+      directory: "C:/data/target/logs"
+      pattern: "app_.*\\.log"
+    encoding: "utf-8"
+    context_lines: 2
+
+  # ── XML — direct path ──────────────────────────────────────────────────────
+  - id: "config_xml"
+    type: "xml"
+    source:
+      path: "C:/data/source/config.xml"
+    target:
+      path: "C:/data/target/config.xml"
+    exclude_tags:
+      - "timestamp"
+      - "lastModified"
+      - "generatedBy"
+    exclude_attributes:
+      - "id"
+      - "uuid"
+      - "createdAt"
+    max_diffs: 100
+
+  # ── XML — directory pattern ────────────────────────────────────────────────
+  - id: "export_xml"
+    type: "xml"
+    source:
+      directory: "C:/data/source/xml"
+      pattern: "export_.*\\.xml"
+    target:
+      directory: "C:/data/target/xml"
+      pattern: "export_.*\\.xml"
+    exclude_tags:
+      - "metadata"
+    exclude_attributes:
+      - "timestamp"

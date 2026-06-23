@@ -1,0 +1,29 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Test / temp files
+test_*.csv
+test_*.xml
+test_*.yml
+test_report*.html
+
+# Reports generated at runtime
+*.html
+*.json
+!config_example.yml
+
+# OS
+.DS_Store
+Thumbs.db
