@@ -50,7 +50,7 @@ output:
 database_pairs:
 
   # ── Coppia sullo stesso Oracle instance → SQL MINUS eseguito sul DB ────────
-  - id: "HR_EMPLOYEES"
+  - id: "ORDERS"
     source:
       user:     "${CHECK_TOOL_SRC_USER}"
       password: "${CHECK_TOOL_SRC_PASSWORD}"
@@ -58,7 +58,7 @@ database_pairs:
       port:     "${CHECK_TOOL_SRC_PORT}"
       service:  "${CHECK_TOOL_SRC_SERVICE}"
       schema:   "${CHECK_TOOL_SRC_SCHEMA}"
-      table:    "EMPLOYEES"
+      table:    "ORDERS"
     target:
       user:     "${CHECK_TOOL_TGT_USER}"
       password: "${CHECK_TOOL_TGT_PASSWORD}"
@@ -66,10 +66,7 @@ database_pairs:
       port:     "${CHECK_TOOL_TGT_PORT}"
       service:  "${CHECK_TOOL_TGT_SERVICE}"
       schema:   "${CHECK_TOOL_TGT_SCHEMA}"
-      table:    "EMPLOYEES"
-    exclude_columns:
-      - "LAST_UPDATE_DATE"
-      - "LAST_UPDATED_BY"
+      table:    "ORDERS"
     max_diffs: 200
 
   # ── Seconda coppia ─────────────────────────────────────────────────────────

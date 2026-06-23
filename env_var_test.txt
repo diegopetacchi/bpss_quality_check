@@ -1,0 +1,14 @@
+# Variabili sorgente (stessa istanza locale per entrambi i lati in questo esempio)
+$env:CHECK_TOOL_SRC_USER     = "system"
+$env:CHECK_TOOL_SRC_PASSWORD = "manager"
+$env:CHECK_TOOL_SRC_HOST     = "localhost"
+$env:CHECK_TOOL_SRC_PORT     = "1521"
+$env:CHECK_TOOL_SRC_SERVICE  = "XE"
+$env:CHECK_TOOL_SRC_SCHEMA   = "DBT"
+
+$env:CHECK_TOOL_TGT_USER     = "system"
+$env:CHECK_TOOL_TGT_PASSWORD = "manager"
+$env:CHECK_TOOL_TGT_HOST     = "localhost"
+$env:CHECK_TOOL_TGT_PORT     = "1521"
+$env:CHECK_TOOL_TGT_SERVICE  = "XE"
+$env:CHECK_TOOL_TGT_SCHEMA   = "SYSTEM"

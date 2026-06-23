@@ -1,0 +1,71 @@
+# =============================================================================
+# diff_checker — Configurazione di esempio (Oracle + variabili d'ambiente)
+# =============================================================================
+#
+# Utilizzo:
+#   python main.py config_example.yml -o report.html
+#   python main.py config_example.yml -f json -o report.json
+#
+# Prima dell'esecuzione esportare le variabili con prefisso CHECK_TOOL_:
+#
+#   Windows PowerShell:
+#     $env:CHECK_TOOL_SRC_USER     = "hr"
+#     $env:CHECK_TOOL_SRC_PASSWORD = "hr_password"
+#     $env:CHECK_TOOL_SRC_HOST     = "ora-source.example.com"
+#     $env:CHECK_TOOL_SRC_PORT     = "1521"
+#     $env:CHECK_TOOL_SRC_SERVICE  = "ORCL"
+#     $env:CHECK_TOOL_SRC_SCHEMA   = "HR"
+#     $env:CHECK_TOOL_TGT_USER     = "hr"
+#     $env:CHECK_TOOL_TGT_PASSWORD = "hr_password"
+#     $env:CHECK_TOOL_TGT_HOST     = "ora-target.example.com"
+#     $env:CHECK_TOOL_TGT_PORT     = "1521"
+#     $env:CHECK_TOOL_TGT_SERVICE  = "ORCL"
+#     $env:CHECK_TOOL_TGT_SCHEMA   = "HR"
+#
+#   Linux / macOS:
+#     export CHECK_TOOL_SRC_USER=hr  ...
+#
+# Tutti i valori stringa del YAML supportano la sintassi ${VAR_NAME}.
+# =============================================================================
+
+# ── Output (valori predefiniti, sovrascrivibili dai flag CLI) ─────────────────
+output:
+  format: "html"            # html | text | json
+  file:   "report.html"     # omettere per stampare su stdout
+
+
+# =============================================================================
+# COPPIE TABELLE DATABASE (Oracle)
+# =============================================================================
+# Connessione tramite componenti individuali (raccomandato con env vars):
+#   user / password / host / port (default 1521) / service
+#
+# In alternativa, una connection_string SQLAlchemy completa:
+#   connection_string: "oracle+oracledb://user:pwd@host:1521/?service_name=SVC"
+#
+# Logica di confronto dati:
+#   • stesso host/service (connection_string identica) → SQL MINUS sul DB
+#   • host/service diversi                            → Python set-difference
+# =============================================================================
+database_pairs:
+
+  # ── Coppia sullo stesso Oracle instance → SQL MINUS eseguito sul DB ────────
+  - id: "ORDERS"
+    source:
+      user:     "${CHECK_TOOL_SRC_USER}"
+      password: "${CHECK_TOOL_SRC_PASSWORD}"
+      host:     "${CHECK_TOOL_SRC_HOST}"
+      port:     "${CHECK_TOOL_SRC_PORT}"
+      service:  "${CHECK_TOOL_SRC_SERVICE}"
+      schema:   "${CHECK_TOOL_SRC_SCHEMA}"
+      table:    "ORDERS"
+    target:
+      user:     "${CHECK_TOOL_TGT_USER}"
+      password: "${CHECK_TOOL_TGT_PASSWORD}"
+      host:     "${CHECK_TOOL_TGT_HOST}"
+      port:     "${CHECK_TOOL_TGT_PORT}"
+      service:  "${CHECK_TOOL_TGT_SERVICE}"
+      schema:   "${CHECK_TOOL_TGT_SCHEMA}"
+      table:    "ORDERS"
+    max_diffs: 200
+
